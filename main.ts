@@ -1,7 +1,7 @@
-import * as request from "request";
+import fetch from "node-fetch";
 import { FilesBuilder } from "./src/files-builder";
 import { ContentGenerate } from "./src/content-generate";
-import * as figlet from "figlet";
+import figlet from "figlet";
 import { GamesType } from "./src/enum/GamesType";
 import { terminal as term } from "terminal-kit";
 
@@ -44,49 +44,43 @@ export class Main {
    * @param gametype
    * @return void
    */
-  public static onEnable = (
+  public static onEnable = async (
     dir: string,
     gametype: GamesType
   ): Promise<void> => {
-    let json = Main.getNativeLink(gametype);
+    const jsonUrl = Main.getNativeLink(gametype);
 
-    if (!json) return;
+    if (!jsonUrl) return;
 
-    return new Promise((resolve) => {
-      request.get(json, async (error, response, content) => {
-        const files = new FilesBuilder(dir);
-        const json = JSON.parse(content);
+    try {
+      const response = await fetch(jsonUrl);
+      const content = await response.text();
+      const json = JSON.parse(content);
 
-        await files.init();
+      const files = new FilesBuilder(dir);
+      await files.init();
 
-        files.category(json);
+      await files.category(json);
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        const builder = new ContentGenerate(files).setDocumentationUrl(
-          Main.getNativeDocsUrl(gametype)
-        );
+      const builder = new ContentGenerate(files).setDocumentationUrl(
+        Main.getNativeDocsUrl(gametype)
+      );
 
-        try {
-          await builder.generateTemplate(json);
-        } catch (err) {
-          term.red(err);
-        } finally {
-          resolve();
-        }
-      });
-    });
+      await builder.generateTemplate(json);
+    } catch (err) {
+      term.red(String(err));
+    }
   };
 
   /**
    * Folder generate logic
-   *
-   * @param response
-   *
+   * 
    * @return void
    */
-  public static onFolderGenerate = (response: void) => {
-    term.cyan("Create build directory successfully : " + response);
+  public static onFolderGenerate = () => {
+    term.cyan("Create build directory successfully");
   };
 
   /**
@@ -100,12 +94,12 @@ export class Main {
    */
   public static onFileUpdate = (
     stats: { native: { total: number; current: number } },
-    filename: String,
-    nativename: String
+    filename: string,
+    nativename: string
   ): void => {
     stats.native.current++;
-    term.green("[File : " + filename + " ] [Native : " + nativename + " ]\n");
-    if (stats.native.current == stats.native.total) process.exit();
+    term.green(`[File: ${filename}] [Native: ${nativename}]\n`);
+    if (stats.native.current === stats.native.total) process.exit();
   };
 }
 

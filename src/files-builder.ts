@@ -22,14 +22,15 @@ export class FilesBuilder {
    *
    * @return Promise<void | never>
    */
-  public init = async (): Promise<void | never> => {
-    filesystem.exists(this.directory, (exists) => {
-      if (exists) filesystem.remove(this.directory);
-    });
+  public init = async (): Promise<void> => {
+    const exists = await filesystem.pathExists(this.directory);
+    if (exists) {
+      await filesystem.remove(this.directory);
+    }
+    
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    return filesystem.ensureDir(this.directory).then((response) => {
-      if (response !== undefined) Main.onFolderGenerate(response);
-    });
+    await filesystem.ensureDir(this.directory);
+    Main.onFolderGenerate();
   };
 
   /**
@@ -39,18 +40,16 @@ export class FilesBuilder {
    *
    * @return void
    */
-  public category = (data: JSON): void => {
-    for (let category in data) {
-      const filepath = `${this.directory}/${category.toString()}.lua`;
-      filesystem
-        .ensureFile(filepath)
-        .then(() => {
-          filesystem.appendFile(filepath, "---@meta\n\n");
-          console.info("Create file successfully : " + category.toString());
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+  public category = async (data: Record<string, unknown>): Promise<void> => {
+    for (const category in data) {
+      const filepath = `${this.directory}/${category}.lua`;
+      try {
+        await filesystem.ensureFile(filepath);
+        await filesystem.appendFile(filepath, "---@meta\n\n");
+        console.info(`Create file successfully: ${category}`);
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 
@@ -64,17 +63,16 @@ export class FilesBuilder {
    *
    * @return Promise<void | string>
    */
-  public update = (
-    files: String,
-    data: String,
-  ): Promise<void | string> => {
-    return new Promise((resolve, reject) => {
-      const fileName = `${this.directory}/${files}.lua`;
-
-      filesystem.appendFile(fileName, data, (error) => {
-        if (error) return reject(`can't update file ${files}\n${error}`);
-        resolve();
-      });
-    });
+  public update = async (
+    files: string,
+    data: string,
+  ): Promise<void> => {
+    const fileName = `${this.directory}/${files}.lua`;
+    
+    try {
+      await filesystem.appendFile(fileName, data);
+    } catch (error) {
+      throw new Error(`can't update file ${files}\n${error}`);
+    }
   };
 }

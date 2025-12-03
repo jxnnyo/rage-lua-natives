@@ -20,7 +20,7 @@ export interface NativeDefinition {
   old_names?: string[];
 }
 
-export function GetNativeType(type: string, input = false) {
+export function GetNativeType(type: string, input = false): string {
   type = type.toLowerCase();
 
   switch (type) {

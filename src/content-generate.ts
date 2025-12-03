@@ -114,12 +114,12 @@ ${aliases ? `${aliases}\n` : ""}`;
    *
    * @return void
    */
-  public generateTemplate = async (data: JSON): Promise<string | void> => {
+  public generateTemplate = async (data: Record<string, any>): Promise<string | void> => {
     let nativeTotal = 0;
 
     for await (const [namespace, natives] of Object.entries(data)) {
       let namespaceTotal = 0;
-      let output = {};
+      let output: Record<string, string> = {};
 
       for (const [hash, native] of Object.entries(natives) as [
         string,
@@ -182,7 +182,10 @@ ${aliases ? `${aliases}\n` : ""}`;
       );
 
       for (const i in orderedKeys) {
-        outputStr += output[orderedKeys[i]];
+        const key = orderedKeys[i];
+        if (key) {
+          outputStr += output[key];
+        }
       }
 
       await this.filesBuilder
@@ -275,8 +278,9 @@ ${aliases ? `${aliases}\n` : ""}`;
     const newReturnTypes: string[] = [returnType];
 
     for (let i = 0; i < params.length; i++) {
-      let type: string = this.seperateObjectTypes(params[i].type).toLowerCase();
-      params[i].type = type;
+      if (!params[i]) continue;
+      let type: string = this.seperateObjectTypes(params[i]!.type).toLowerCase();
+      params[i]!.type = type;
 
       if (!type.includes("*")) continue;
 
@@ -291,7 +295,7 @@ ${aliases ? `${aliases}\n` : ""}`;
         this.isNonReturnPointerNative(data.name) ||
         type.substring(-4) === "char"
       ) {
-        params[i].type = type;
+        params[i]!.type = type;
         continue;
       }
 
@@ -310,12 +314,14 @@ ${aliases ? `${aliases}\n` : ""}`;
    * @return String
    */
   private nativeName = (data: any, natives: string): string => {
-    if (data.name !== undefined || natives !== undefined)
+    if (data.name !== undefined || natives !== undefined) {
       return (data.name || natives)
         .toLowerCase()
         .replace("0x", "n_0x")
-        .replace(/_([a-z])/g, (_, bit: string) => bit.toUpperCase())
-        .replace(/^([a-z])/, (_, bit: string) => bit.toUpperCase());
+        .replace(/_([a-z])/g, (_: any, bit: string) => bit.toUpperCase())
+        .replace(/^([a-z])/, (_: any, bit: string) => bit.toUpperCase());
+    }
+    return "";
   };
 
   private getAliases = (
@@ -362,6 +368,7 @@ ${aliases ? `${aliases}\n` : ""}`;
     let paramPos = 0;
     for (let i = 0; i < data.params.length; i++) {
       const nativeParam = data.params[i];
+      if (!nativeParam) continue;
 
       if (nativeParam.type.includes("*")) continue;
 
@@ -408,7 +415,7 @@ ${aliases ? `${aliases}\n` : ""}`;
    * @return string Returns the predefined pattern
    */
   private nativeUsage = (data: any, nativeParams: string): string => {
-    const template = (result, native, params) =>
+    const template = (result: any, native: any, params: any) =>
       `${result} ${native}(${params});`;
 
     return template(data.results, data.name, nativeParams);
